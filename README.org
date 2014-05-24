@@ -1,0 +1,38 @@
+* strajeela
+
+This software is intended to be a better version of Strasheela at some stage.
+
+Anyway, at the moment this is just a very early version not ready to be used yet.
+
+** Installation
+
+Download from http://example.com/FIXME.
+
+** Usage
+
+FIXME: explanation
+
+    =$ java -jar strajeela-0.0.1-standalone.jar [args]=
+
+** Options
+
+FIXME: listing of options this app accepts.
+
+** Examples
+
+...
+
+*** Bugs
+
+...
+
+*** Any Other Sections
+*** That You Think
+*** Might be Useful
+
+** License
+
+Copyright © 2014 Torsten Anders
+
+Distributed under the GNU General Public License.
+
