@@ -1,5 +1,8 @@
 ;; (partial) port of Strasheela source/MusicUtils.oz
 
+;; See also the Overtone pitch representation
+;; https://github.com/overtone/overtone/blob/cfd5ea71c67401bbda0b619a6f49268d01adc06c/src/overtone/music/pitch.clj
+
 (ns ^{:doc "Utilities related to pitch processing including microtonal pitches."}
   strajeela.pitch
   ;; https://github.com/clojure/math.numeric-tower
