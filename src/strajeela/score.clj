@@ -1,12 +1,8 @@
 ;;; File defines the music repesentation
 
-;; See also the Overtone pitch representation
-;; https://github.com/overtone/overtone/blob/cfd5ea71c67401bbda0b619a6f49268d01adc06c/src/overtone/music/pitch.clj
-
 (ns strajeela.score
   ;; (:gen-class)
   )
-
 
 ;; Expect a partial score definition and returns a full score with all details. 
 ;; Similar in principle to translation of partial score into full score in Strasheela, but full score is 
@@ -15,7 +11,7 @@
 ;; In a CSP, all decision variables are represented by integers or sets of integers (or possibly floats), but in the partial score and perhaps even the full score, certain values (e.g., the pitch class) can be represented by synbols instead for convenience. 
 ;; TODO: def 
 (defn full-score 
-  "doc-string"
+  "TODO: def and doc-string"
   [arg-list]
   )
 
