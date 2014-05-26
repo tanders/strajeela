@@ -2,7 +2,8 @@
 
 This software is intended to be a better version of Strasheela at some stage. Anyway, at the moment this is just a very early version, not quite ready to be used yet.  
 
-Once you downloaded the source, you could check out at the [[./doc/reference/index.html][reference documentation]] what is there so far (not much yet).[fn:: Unfortunately, Github makes it rather challenging to show automatically generated HTML files.]
+Once you downloaded the source, you could check out at the [[./doc/reference/index.html][reference documentation]] what is there so far (not much yet). 
+(Unfortunately, Github makes it rather challenging to show automatically generated HTML files.)
 
 ** COMMENT Installation
 
