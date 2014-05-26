@@ -1,24 +1,24 @@
 * strajeela
 
-This software is intended to be a better version of Strasheela at some stage.
+This software is intended to be a better version of Strasheela at some stage. Anyway, at the moment this is just a very early version, not quite ready to be used yet.  
 
-Anyway, at the moment this is just a very early version not ready to be used yet.
+You can check out at the [[./doc/reference/index.html][reference documentation]] what is there so far (not much yet).
 
-** Installation
+** COMMENT Installation
 
 Download from http://example.com/FIXME.
 
-** Usage
+** COMMENT Usage
 
 FIXME: explanation
 
     =$ java -jar strajeela-0.0.1-standalone.jar [args]=
 
-** Options
+** COMMENT Options
 
 FIXME: listing of options this app accepts.
 
-** Examples
+** COMMENT Examples
 
 ...
 
