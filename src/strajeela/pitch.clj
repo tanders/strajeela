@@ -105,23 +105,21 @@ Note that a keynum here is not limited to a MIDI keynumber, but denotes a keynum
 
 **Monzo**
 
-```{tidy=FALSE}
-lower raise  2,3,5,7,11-monzo       ratio      ~cents
-  b    #    [-11  7,  0  0  0>    2187:2048  113.6850061
-  v    ^    [ -5  1,  0  0  1>      33:32     53.2729432
-  <    >    [  6 -2,  0 -1  0>      64:63     27.2640918
-  -    +    [ -4  4, -1  0  0>      81:80     21.5062896
-```
+    lower raise  2,3,5,7,11-monzo       ratio      ~cents
+      b    #    [-11  7,  0  0  0>    2187:2048  113.6850061
+      v    ^    [ -5  1,  0  0  1>      33:32     53.2729432
+      <    >    [  6 -2,  0 -1  0>      64:63     27.2640918
+      -    +    [ -4  4, -1  0  0>      81:80     21.5062896
 
 **de Coul**
 
-```{tidy=FALSE}
-lower raise  2,3,5,7,11-monzo      ratio      ~cents
-  b    #    [-11  7  0  0  0]    2187:2048  113.6850061
-  v    ^    [ -5  1  0  0  1]      33:32     53.2729432
-  L    7    [  6 -2  0 -1  0]      64:63     27.2640918
-  \\    /    [ -4  4 -1  0  0]      81:80     21.5062896
-```
+    lower raise  2,3,5,7,11-monzo      ratio      ~cents
+      b    #    [-11  7  0  0  0]    2187:2048  113.6850061
+      v    ^    [ -5  1  0  0  1]      33:32     53.2729432
+      L    7    [  6 -2  0 -1  0]      64:63     27.2640918
+      \\    /    [ -4  4 -1  0  0]      81:80     21.5062896
+
+Remember that a backslash must be escaped (and it must be part of a string).
 "
   {"bb" 4194304/4782969
    
@@ -207,7 +205,7 @@ lower raise  2,3,5,7,11-monzo      ratio      ~cents
   )
 )
 
-(def ^:const pythagorean-nominals
+(def ^{:const true :private true} pythagorean-nominals
   {"F" 4/3
    "C" 1/1
    "G" 3/2
@@ -359,35 +357,35 @@ Examples (with default accidental mapping)
   (prime-limit 81/64) ; 3
   )
 
-(defn is-et-name? 
-  "Returns true if pitch-unit is a symbol/keyword/string which matches the pattern <Digit>+et such as :31et or '72et."
+(defn is-et-unit? 
+  "Returns true if pitch-unit is a symbol/keyword/string which matches the pattern `<Digit>+et` such as `:31et` or `'72et`."
   [pitch-unit]
   (re-matches #"\d+et" (name pitch-unit)))
 
 (comment
   ;; true
-  (is-et-name? "12et")
-  (is-et-name? :31et)
+  (is-et-unit? "12et")
+  (is-et-unit? :31et)
   ;; false
-  (is-et-name? :xet)
-  (is-et-name? :et31)
-  (is-et-name? "false")
-  (is-et-name? "ok")
+  (is-et-unit? :xet)
+  (is-et-unit? :et31)
+  (is-et-unit? "false")
+  (is-et-unit? "ok")
   )
 
 
-(defn get-pitches-per-octave 
+(defn units-pitches-per-octave 
   "Returns the pitches per octave expressed by an ET pitch unit, e.g., for :31et it returns 31."
   [et-pitch-unit]
   (Integer/parseInt (apply str (drop-last 2 (name et-pitch-unit)))))
 
 (comment
   ;; returns int
-  (get-pitches-per-octave "72et")
-  (get-pitches-per-octave :31et)
+  (units-pitches-per-octave "72et")
+  (units-pitches-per-octave :31et)
   ;; error
-  (get-pitches-per-octave 42)
-  (get-pitches-per-octave 'test)
+  (units-pitches-per-octave 42)
+  (units-pitches-per-octave 'test)
   )
 
 
@@ -428,9 +426,9 @@ An unset tuning table (nil) corresponds to the equal tempered scale."
 
 
 (defn pitch->midi 
-  "Transforms pitch measured in pitch-unit (a symbol, keyword or string) into the corresponding 'Midi float', i.e. a Midi number where positions after the decimal point express microtonal pitch deviations (e.g., 60.5 is middle C raised by a quarter tone). Possible pitch units are midi (i.e., 12et), midicent/midic, frequency/freq/hz, and arbitrary equal temperaments (e.g., 31et, 72et).
+  "Transforms pitch measured in pitch-unit (a symbol, keyword or string) into the corresponding 'Midi float', i.e. a Midi number where positions after the decimal point express microtonal pitch deviations (e.g., 60.5 is middle C raised by a quarter tone). Possible pitch units are midi (i.e., 12-tone equal temperament), midicent/midic, frequency/freq/hz, and arbitrary equal temperaments (:22et, :31et, :72et and so forth).
 
-The transformation takes into account a tuning table defined with *tuning-table*. Alternatively, a tuning table can be given directly to the optional arg tuning-table.
+The transformation takes into account an optional tuning table, which defaults to *tuning-table* (which is nil by default).
 
 BUG: Currently, tuning tables are only supported for the pitch-unit midi."
   ([pitch pitch-unit] (pitch->midi pitch pitch-unit *tuning-table*))
@@ -453,8 +451,8 @@ BUG: Currently, tuning tables are only supported for the pitch-unit midi."
          ("midicent" "midic") (/ pitch 100)
          "millimidicent" (/ pitch 100000)
          ("frequency" "freq" "hz") (freq->keynum pitch)
-         (if (is-et-name? pitch-unit)
-           (/ (* pitch 12) (get-pitches-per-octave pitch-unit))
+         (if (is-et-unit? pitch-unit)
+           (/ (* pitch 12) (units-pitches-per-octave pitch-unit))
            (throw (IllegalArgumentException. 
                    (str pitch-unit 
                         " is not a pitch unit. Supported pitch units are the midi, midicent (or midic), frequency (or freq, hz), and arbitrary equal temperaments (notated <Digit>+et)."))))))))
