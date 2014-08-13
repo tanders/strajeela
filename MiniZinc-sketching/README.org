@@ -1,0 +1,2 @@
+This folder contains design and example sketches directly in MiniZinc for testing purposes etc.
+
