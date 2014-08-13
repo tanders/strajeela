@@ -20,7 +20,7 @@
   
   )
 
-(ns ^{:doc "Utilities related to pitch processing including microtonal pitches."}
+(ns ^{:doc "Utilities related to pitch processing including microtonal pitches. No constraints here."}
   strajeela.pitch
   ;; https://github.com/clojure/math.numeric-tower
   (:require [clojure.math.numeric-tower :as cl_math :refer [expt]]))
