@@ -5,7 +5,6 @@ include "globals.mzn";
 %
 % TODO
 %
-% - In current version seemingly 1 solution excluded (before 512  solutions for n=10, now only 511) -- is that correct?
 %
 %% Note: additional propagation slightly slowed down search -- currently more work for solver without reducing search space
 %%  Performance for additional compositional etc. constraints may benefit, lets see 
@@ -28,6 +27,13 @@ include "globals.mzn";
 % - add support for rests
 % 
 
+% - OK In current version 1 solution excluded (before 512  solutions for n=10, now only 511) -- why?
+%  Several differences between list of all solutions for versions with and without new index constraints (solutions visited in different order)
+%  How many solutions possible for 10 binary variables: 2^9 = 512. (One of the 10 vars is fixed beforehand) 
+%  -> Possible way to find excluded solution: (automatically) create data files for all 512 solutions; create shell script to run all 512 tests; identify excluded solution by its output
+%  !! new_event_fd = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  ; =====UNSATISFIABLE=====
+%% Perhaps UNSATISFIABLE because it excludes 11 in event_indices_seamless?
+%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -60,27 +66,42 @@ predicate at_least_tmp(int: n, array[int] of var int: x, int: v) =
 
 %% Convert a set S to an array xs[1..n]. Set elements are in increasing order in the array, and set elements must be in 1..n.
 %% If the array is longer than there are set elements, then the end of the array is padded with n+1.
-%% source: modification of array2set in http://www.hakank.org/minizinc/common.mzn
 predicate set2array(var set of int: S, array[int] of var int: xs) =
   let { int: n = length(xs),
         int: exceeding = n+1 }
 in
   %% improve propagation
   forall(i in 1..n-1)( card(S) >= i -> xs[i] < xs[i+1] ) /\
-  increasing(xs) /\
-%   alldifferent_except_x(xs[n], xs) /\ % important for avoiding symmetries
-  %% TODO: better alldifferent constraint based on card(S)
-  %% ?? using global constraint
-  %% - distribute
-  %% - global_cardinality  
-  %% - global_cardinality_closed
-  forall(i in 1..n) ( xs[i] in (S union {exceeding} ))  /\
-  % secure that the values _not_ in xs are _not_ in S (up to the number of elements in the set)
-  % iterates through domain of the vars in xs
-  forall(i in lb_array(xs)..ub_array(xs)) (
-    not exists(j in 1..n) (xs[j] = i ) <-> not (i in (S union {exceeding} ))
-  )
-;
+  increasing(xs) /\ 
+  forall(dom_val in lb_array(xs)..ub_array(xs)) (
+    exists(i in 1..n)(dom_val = exceeding \/ xs[i] = dom_val) <-> dom_val in (S union {exceeding})
+  );
+
+
+%% Old version (bug forced exceeding into xs)
+% %% Convert a set S to an array xs[1..n]. Set elements are in increasing order in the array, and set elements must be in 1..n.
+% %% If the array is longer than there are set elements, then the end of the array is padded with n+1.
+% %% source: modification of array2set in http://www.hakank.org/minizinc/common.mzn
+% predicate set2array(var set of int: S, array[int] of var int: xs) =
+%   let { int: n = length(xs),
+%         int: exceeding = n+1 }
+% in
+%   %% improve propagation
+%   forall(i in 1..n-1)( card(S) >= i -> xs[i] < xs[i+1] ) /\
+%   increasing(xs) /\
+% %   alldifferent_except_x(xs[n], xs) /\ % important for avoiding symmetries
+%   %% TODO: better alldifferent constraint based on card(S)
+%   %% ?? using global constraint
+%   %% - distribute
+%   %% - global_cardinality  
+%   %% - global_cardinality_closed
+%   forall(i in 1..n) ( xs[i] in (S union {exceeding} ))  /\
+%   % secure that the values _not_ in xs are _not_ in S (up to the number of elements in the set)
+%   % iterates through domain of the vars in xs
+%   forall(i in lb_array(xs)..ub_array(xs)) (
+%     not exists(j in 1..n) (xs[j] = i ) <-> not (i in (S union {exceeding} ))
+%   )
+% ;
 
 
 % %% Old version (end of array padded with repetition of last element and slightly worse propagation)
@@ -216,12 +237,11 @@ constraint forall(i in 2..n)( % redundant constraint for propagation
 %%   roots(new_event_fd, event_indices_set, {1})
 %%   
 
-
 %% event_indices_set
 %% event_indices_seamless
 constraint link_set_to_booleans(event_indices_set, new_event);
 constraint set2array(event_indices_set, event_indices_seamless);
-% %% Makes seemingly no difference
+% % %% Makes seemingly no difference
 % constraint forall (i in 1..n)( 
 %   new_event[i] -> at_least_tmp(1, event_indices_seamless, i)
 % );
@@ -277,6 +297,15 @@ constraint set2array(event_indices_set, event_indices_seamless);
 %%
 %%   TMP tests
 %%
+
+% arrays of 1d where the first is fix int, the second is var int
+predicate cp1d(array[int] of int: x, array[int] of var int: y) =
+  assert(index_set(x) = index_set(y),
+           "cp1d: x and y have different sizes",
+    forall(i in index_set(x)) ( x[i] = y[i] ) )
+; 
+% constraint cp1d([1, 1, 1, 1, 1, 1, 1, 1, 1, 1], new_event_fd);
+
 
 % constraint new_event[4] = true;
 % constraint new_event[7] = true;
@@ -342,7 +371,7 @@ constraint set2array(event_indices_set, event_indices_seamless);
 
 % solve :: int_search(slice_duration ++ new_event_fd, 
 %% TMP: search also for event_indices_seamless
-solve :: int_search(slice_duration ++ new_event_fd, % ++ event_indices_seamless, 
+solve :: int_search(new_event_fd ++ slice_duration, % ++ event_indices_seamless, 
   first_fail, 
 %   most_constrained,
   indomain_random, complete)
