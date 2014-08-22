@@ -157,19 +157,31 @@ array[1..n] of var 0..max_end_time: slice_start;
 
 %% Voice-specific variables
 
+%% marker where new note starts
 %% new_event/new_event_fd: I need Boolean representation for many constraints, and integer representation for branching
-array[1..n] of var bool: new_event_1; 
+array[1..n] of var bool: new_event_1; % voice 1
+array[1..n] of var bool: new_event_2; % voice 2 
 array[1..n] of var 0..1: new_event_fd_1; 
-var set of 1..n: event_indices_set_1; % set of indices where events start
+array[1..n] of var 0..1: new_event_fd_2; 
+%% set of indices where events start
+var set of 1..n: event_indices_set_1; 
+var set of 1..n: event_indices_set_2; 
 %% event start indices without intermediate elements (e.g., consecutive indices are always pointing to different events)
-array[1..n] of var 1..n+1: event_indices_seamless_1; % n+1 to mark indices beyond the range
+%% n+1 to mark indices beyond the range
+array[1..n] of var 1..n+1: event_indices_seamless_1; 
+array[1..n] of var 1..n+1: event_indices_seamless_2; 
 %% start of most recently started note (not necessarily still playing)
 array[1..n] of var 0..max_end_time: recentStartTime_1; 
+array[1..n] of var 0..max_end_time: recentStartTime_2; 
 % array[1..n] of var 0..max_end_time: event_startTime; % same as recentStartTime -- until I introduced rests
 %% accumulator for duration: value before new_event=true correct event_duration
 array[1..n] of var 1..max_end_time: event_duration_accum_1; 
+array[1..n] of var 1..max_end_time: event_duration_accum_2; 
 array[1..n] of var 1..max_end_time: event_duration_1; 
-array[1..n] of var 48..72: event_pitch_1; % MIDI note numbers
+array[1..n] of var 1..max_end_time: event_duration_2; 
+%% MIDI note numbers
+array[1..n] of var 48..72: event_pitch_1; 
+array[1..n] of var 48..72: event_pitch_2; 
 
 % %% TMP comments
 % array[1..n] of var 0..n: current_start_index; % index of current new_event 
@@ -185,15 +197,21 @@ array[1..n] of var 48..72: event_pitch_1; % MIDI note numbers
 constraint slice_constraints(slice_start, slice_duration);
 
 constraint forall(i in 1..n)(bool2int(new_event_1[i]) = new_event_fd_1[i]);
+constraint forall(i in 1..n)(bool2int(new_event_2[i]) = new_event_fd_2[i]);
 
 constraint recentStartTime_constraints(new_event_1, slice_start, recentStartTime_1);
+constraint recentStartTime_constraints(new_event_2, slice_start, recentStartTime_2);
 
 constraint event_duration_constraints(new_event_1, slice_duration, event_duration_accum_1, event_duration_1);
+constraint event_duration_constraints(new_event_2, slice_duration, event_duration_accum_2, event_duration_2);
 
 constraint link_set_to_booleans(event_indices_set_1, new_event_1);
+constraint link_set_to_booleans(event_indices_set_2, new_event_2);
 constraint set2array(event_indices_set_1, event_indices_seamless_1);
+constraint set2array(event_indices_set_2, event_indices_seamless_2);
 
 constraint event_pitch_constraints(new_event_1, event_pitch_1);
+constraint event_pitch_constraints(new_event_2, event_pitch_2);
 
 
 % %% TMP comments
@@ -230,10 +248,10 @@ constraint event_pitch_constraints(new_event_1, event_pitch_1);
 % !! TODO: TMP -- aux until I introduced rests
 constraint new_event_1[1] = true;
 
-%% consecutive events differ in pitch
-constraint forall(i in 1..n-1) (  
-  event_indices_seamless_1[i+1] <= n -> 
-    event_pitch_1[event_indices_seamless_1[i]] != event_pitch_1[event_indices_seamless_1[i+1]] ); 
+% %% consecutive events differ in pitch
+% constraint forall(i in 1..n-1) (  
+%   event_indices_seamless_1[i+1] <= n -> 
+%     event_pitch_1[event_indices_seamless_1[i]] != event_pitch_1[event_indices_seamless_1[i+1]] ); 
 
 
 % %% consecutive events differ in duration
@@ -309,7 +327,7 @@ constraint forall(i in 1..n-1) (
 
 % solve :: int_search(slice_duration ++ new_event_fd, 
 %% TMP: search also for event_indices_seamless
-solve :: int_search(slice_duration ++ new_event_fd_1 ++ event_pitch_1, 
+solve :: int_search(slice_duration ++ new_event_fd_1 ++ new_event_fd_2 ++ event_pitch_1 ++ event_pitch_2, 
   first_fail, 
 %   most_constrained,
   indomain_random, complete)
@@ -321,16 +339,20 @@ solve :: int_search(slice_duration ++ new_event_fd_1 ++ event_pitch_1,
 %   satisfy;
 
 output [ 
-  "slice_duration: " ++ show(slice_duration) ++ "\n" 
-  ++ "slice_start: " ++ show(slice_start) ++ "\n" 
-  ++ "new_event_1: " ++ show(new_event_fd_1) ++ "\n"
-  ++ "recentStartTime_1: " ++ show(recentStartTime_1) ++ "\n"
-%  ++ "event_startTime: " ++ show(event_startTime) ++ "\n" 
-  ++ "event_duration_accum_1: " ++ show(event_duration_accum_1) ++ "\n"
+%   "slice_duration: " ++ show(slice_duration) ++ "\n" 
+%   ++ "slice_start: " ++ show(slice_start) ++ "\n" 
+  "new_event_1: " ++ show(new_event_fd_1) ++ "\n"
+  ++ "new_event_2: " ++ show(new_event_fd_2) ++ "\n"
+%   ++ "recentStartTime_1: " ++ show(recentStartTime_1) ++ "\n"
+%   ++ "event_startTime: " ++ show(event_startTime) ++ "\n" 
+%   ++ "event_duration_accum_1: " ++ show(event_duration_accum_1) ++ "\n"
   ++ "event_duration_1: " ++ show(event_duration_1) ++ "\n"
-  ++ "event_indices_set_1: " ++ show(event_indices_set_1) ++ "\n"
+  ++ "event_duration_2: " ++ show(event_duration_2) ++ "\n"
+%   ++ "event_indices_set_1: " ++ show(event_indices_set_1) ++ "\n"
   ++ "event_indices_seamless_1: " ++ show(event_indices_seamless_1) ++ "\n"
+  ++ "event_indices_seamless_2: " ++ show(event_indices_seamless_2) ++ "\n"
   ++ "event_pitch_1: " ++ show(event_pitch_1) ++ "\n"
+  ++ "event_pitch_2: " ++ show(event_pitch_2) ++ "\n"
 %   ++ "current_start_index: " ++ show(current_start_index) ++ "\n"
 %   ++ "predecessor_start_index: " ++ show(predecessor_start_index) ++ "\n"
 %   ++ "successor_start_index: " ++ show(successor_start_index) ++ "\n"
