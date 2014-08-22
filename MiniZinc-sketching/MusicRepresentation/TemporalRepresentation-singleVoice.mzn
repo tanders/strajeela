@@ -1,12 +1,11 @@
-% solver: fzn-gecode
-% flags: -r 3
-%
 
 include "globals.mzn";
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % TODO
+%
+% - In current version seemingly 1 solution excluded (before 512  solutions for n=10, now only 511) -- is that correct?
 %
 %% Note: additional propagation slightly slowed down search -- currently more work for solver without reducing search space
 %%  Performance for additional compositional etc. constraints may benefit, lets see 
@@ -22,6 +21,9 @@ include "globals.mzn";
 %
 % - Tests with simple rhythmic constraints (e.g., all notes with same/different durs)
 % - Get access to all different start indices (e.g., with set constraints) for all-different constraints (will have appaling propagation)
+%
+% - Extend to simple counterpoint example
+%   Compare performance with equivalent Strasheela example 
 %
 % - add support for rests
 % 
@@ -45,26 +47,55 @@ int: n = 10;
 %% Constrains the elements of array 'ys' to be all different except those
 %% elements that are assigned to 'x'.
 %% source: modification of MiniZInc's alldifferent_except_0.mzn
+%% unused after all
 predicate alldifferent_except_x(var int: x, array[int] of var int: ys) = 
     forall(i, j in index_set(ys) where i != j) (
        (ys[i] != x /\ ys[j] != x) -> ys[i] != ys[j]
     );
 
+%% TMP (use generic at_least predicate with reification support in Gecode)
+predicate at_least_tmp(int: n, array[int] of var int: x, int: v) =
+    sum(i in index_set(x)) ( bool2int(x[i] == v) ) >= n;
 
-%% Convert an array to a set. Array elements are in increasing order.
-%% Doublicates are only allowed at the end.
+
+%% Convert a set S to an array xs[1..n]. Set elements are in increasing order in the array, and set elements must be in 1..n.
+%% If the array is longer than there are set elements, then the end of the array is padded with n+1.
 %% source: modification of array2set in http://www.hakank.org/minizinc/common.mzn
-%% !! NOTE: this results in an expensive constraint, because of little propagation (basically, array is searched for after set is already found -- the array is not found by propagation)
-predicate array2set(array[int] of var int: xs, var set of int: S) =
-  let { int: n = length(xs) }
+predicate set2array(var set of int: S, array[int] of var int: xs) =
+  let { int: n = length(xs),
+        int: exceeding = n+1 }
 in
+  %% improve propagation
+  forall(i in 1..n-1)( card(S) >= i -> xs[i] < xs[i+1] ) /\
   increasing(xs) /\
-  alldifferent_except_x(xs[1], xs) /\ % important for avoiding symmetries
-  forall(i in index_set(xs)) ( xs[i] in S ) /\
+%   alldifferent_except_x(xs[n], xs) /\ % important for avoiding symmetries
+  %% TODO: better alldifferent constraint based on card(S)
+  %% ?? using global constraint
+  %% - distribute
+  %% - global_cardinality  
+  %% - global_cardinality_closed
+  forall(i in 1..n) ( xs[i] in (S union {exceeding} ))  /\
   % secure that the values _not_ in xs are _not_ in S (up to the number of elements in the set)
+  % iterates through domain of the vars in xs
   forall(i in lb_array(xs)..ub_array(xs)) (
-    (not exists(j in index_set(xs)) (xs[j] = i ) <-> not (i in S))
-  );
+    not exists(j in 1..n) (xs[j] = i ) <-> not (i in (S union {exceeding} ))
+  )
+;
+
+
+% %% Old version (end of array padded with repetition of last element and slightly worse propagation)
+% predicate array2set(array[int] of var int: xs, var set of int: S) =
+%   let { int: n = length(xs) }
+% in
+%   %% improve propagation
+%   forall(i in 1..n-1)( card(S) > i -> xs[i] < xs[i+1] ) /\
+%   increasing(xs) /\
+%   forall(i in index_set(xs)) ( xs[i] in S ) /\
+%   % secure that the values _not_ in xs are _not_ in S (up to the number of elements in the set)
+%   % iterates through domain of the vars in xs
+%   forall(i in lb_array(xs)..ub_array(xs)) (
+%     not exists(j in index_set(xs)) (xs[j] = i ) <-> not (i in S)
+%   );
 
 % predicate array2set(array[int] of var int: x, var set of int: s) =
 %    let { int: n = length(x) }
@@ -96,7 +127,8 @@ constraint forall(i in 1..n)(
 );
 var set of 1..n: event_indices_set; % set of indices where events start
 %% event start indices without intermediate elements (e.g., consecutive indices are always pointing to different events)
-array[1..n] of var 1..n: event_indices_seamless; 
+% array[1..n] of var 1..n: event_indices_seamless; 
+array[1..n] of var 1..n+1: event_indices_seamless; % n+1 to mark indices beyond the range
 %% start of most recently started note (not necessarily still playing)
 array[1..n] of var 0..max_end_time: recentStartTime; 
 % array[1..n] of var 0..max_end_time: event_startTime; % same as recentStartTime -- until I introduced rests
@@ -105,7 +137,7 @@ array[1..n] of var 1..max_end_time: event_duration_accum;
 array[1..n] of var 1..max_end_time: event_duration; 
 % array[1..n] of var 48..72: event_pitch; % MIDI note numbers
 
-%% TMP comments
+% %% TMP comments
 % array[1..n] of var 0..n: current_start_index; % index of current new_event 
 % array[1..n] of var 0..n: predecessor_start_index; % index of preceeding new_event 
 % array[1..n] of var 0..n: successor_start_index; % index of preceeding new_event 
@@ -184,13 +216,16 @@ constraint forall(i in 2..n)( % redundant constraint for propagation
 %%   roots(new_event_fd, event_indices_set, {1})
 %%   
 
+
 %% event_indices_set
 %% event_indices_seamless
 constraint link_set_to_booleans(event_indices_set, new_event);
-%% BUGs: 
-%% - array2set must be revised to cater for 0s at end of event_indices_seamless 
-%% - elements in event_indices_seamless possibly not sorted
-constraint array2set(event_indices_seamless, event_indices_set);
+constraint set2array(event_indices_set, event_indices_seamless);
+% %% Makes seemingly no difference
+% constraint forall (i in 1..n)( 
+%   new_event[i] -> at_least_tmp(1, event_indices_seamless, i)
+% );
+
 %% TODO: first m elements in event_indices_seamless as in event_indices_set
 %% I am looking for the MiniZinc equivalent of the Oz constraint {FS.int.match *M *Dv}
 %% TODO: rest is 0
@@ -212,8 +247,8 @@ constraint array2set(event_indices_seamless, event_indices_set);
 % sort(event_indices_seamless_tmp, event_indices_seamless) % but now 0s are at the beginning, not the end
 
 
-%% TMP comments
-%%
+% %% TMP comments
+% %%
 % % current_start_index
 % constraint forall(i in 1..n)( 
 %   new_event[i] -> ( current_start_index[i] = i ) 
@@ -240,7 +275,7 @@ constraint array2set(event_indices_seamless, event_indices_set);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
-%% TMP tests
+%%   TMP tests
 %%
 
 % constraint new_event[4] = true;
@@ -305,7 +340,9 @@ constraint array2set(event_indices_seamless, event_indices_set);
 %% solve and output
 %% 
 
-solve :: int_search(slice_duration ++ new_event_fd, 
+% solve :: int_search(slice_duration ++ new_event_fd, 
+%% TMP: search also for event_indices_seamless
+solve :: int_search(slice_duration ++ new_event_fd, % ++ event_indices_seamless, 
   first_fail, 
 %   most_constrained,
   indomain_random, complete)
