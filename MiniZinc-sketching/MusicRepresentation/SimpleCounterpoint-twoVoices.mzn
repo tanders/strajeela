@@ -7,12 +7,30 @@ include "globals.mzn";
 %
 %
 
-% - Extend to simple counterpoint example
-%   Compare performance with equivalent Strasheela example 
 %
-% - add support for rests
+% - !! add support for rests
 % 
 
+%
+% - OK Extend to simple counterpoint example
+%   Compare performance with equivalent Strasheela example 
+% OK Simple counterpoint constraints
+% (see ~/oz/music/Strasheela/strasheela/strasheela/examples/Realtime-Examples/Simple-Counterpoint.oz)
+% - First species counterpoint (strictly homophonic -- n = number of notes)
+% - Only diatonic pitches: restricted to the following PCs: {0, 2, 4, 5, 7, 9, 11}
+% - Only consonances: one of the following harmonic intervals: {3, 4, 7, 8, 9, 12, 15, 16}
+% - Only the following melodic intervals: {1..5, 7, 12}
+%
+
+%
+% This simple set of constraints is later revised into the constraints of 
+% ~/oz/music/Strasheela/strasheela/strasheela/examples/02-Fuxian-firstSpecies-Counterpoint.oz 
+%
+
+
+%%
+%% Done
+%%
 %
 % - OK New array storing indices or new note start slices (dense representation)
 %   -> possibly this is not a good idea...
@@ -31,7 +49,7 @@ include "globals.mzn";
 %  How many solutions possible for 10 binary variables: 2^9 = 512. (One of the 10 vars is fixed beforehand) 
 %  -> Possible way to find excluded solution: (automatically) create data files for all 512 solutions; create shell script to run all 512 tests; identify excluded solution by its output
 %  !! new_event_fd = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  ; =====UNSATISFIABLE=====
-%% Perhaps UNSATISFIABLE because it excludes 11 in event_indices_seamless?
+%% Perhaps UNSATISFIABLE because it excludes 11 in event_indices?
 %
 % - OK Tests with simple rhythmic constraints (e.g., all notes with same/different durs)
 % - OK Get access to all different start indices (e.g., with set constraints) for all-different constraints (will have appaling propagation)
@@ -44,7 +62,7 @@ include "globals.mzn";
 
 % Music representation based on Interwoven Voices List (Sneyers) and **kern 
 % int: n; 
-int: n = 10; 
+int: n = 20; 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -143,12 +161,40 @@ predicate event_pitch_constraints(
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
+%% Example-specific (simple counterpoint) predicate definitions
+%% 
+
+%% !! BUG: no propagation -- gecode solver attempts non-diatonic pitches and fails 
+predicate is_diatonic(array[int] of var int: pitch) =
+  let { set of int: ScalePCs = {0, 2, 4, 5, 7, 9, 11} } in 
+    forall(i in 1..n)((pitch[i] mod 12) in ScalePCs );
+
+%% TODO: use Gecode's `distance` constraint (which is likely there) instead of abs(x-y) 
+%% ? TODO: all time slices constrained -- I could limit this possibly to time slices where new note starts, but possibly Gecode is smart enough to "figure this out" anyway by [unification] of pitches of the same note
+predicate is_consonance(array[int] of var int: pitch_1, array[int] of var int: pitch_2) =
+  let { set of int: ConsIntervals = {3, 4, 7, 8, 9, 12, 15, 16} } in 
+    forall(i in 1..n)(abs(pitch_1[i] - pitch_2[i]) in ConsIntervals);
+
+%% TODO: use Gecode's `distance` constraint (which is likely there) instead of abs(x-y) 
+predicate restrict_melodic_interval(array[int] of var int: event_indices, array[int] of var int: pitch) =
+  let { set of int: MelIntervals = {1, 2, 3, 4, 5, 7, 12} } in 
+    forall(i in 1..n-1)(
+      event_indices[i+1] <= n -> 
+        abs(pitch[event_indices[i]] - pitch[event_indices[i+1]]) in MelIntervals); 
+
+%% ? TODO: all time slices constrained -- see comment at is_consonance for same TODO
+predicate no_voice_crossing(array[int] of var int: pitch_1, array[int] of var int: pitch_2) =
+  forall(i in 1..n)(pitch_1[i] > pitch_2[i]);
+
+ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
 %% Variable declarations
 %% 
 
 %% General variables
 
-int: max_slice_dur = 8; % !! can be inconsistent with slice_duration domain
+int: max_slice_dur = 1; % !! can be inconsistent with slice_duration domain
 int: max_end_time = n*max_slice_dur;
 
 array[1..n] of var {1}: slice_duration; % TMP: uniform domain
@@ -168,8 +214,8 @@ var set of 1..n: event_indices_set_1;
 var set of 1..n: event_indices_set_2; 
 %% event start indices without intermediate elements (e.g., consecutive indices are always pointing to different events)
 %% n+1 to mark indices beyond the range
-array[1..n] of var 1..n+1: event_indices_seamless_1; 
-array[1..n] of var 1..n+1: event_indices_seamless_2; 
+array[1..n] of var 1..n+1: event_indices_1; 
+array[1..n] of var 1..n+1: event_indices_2; 
 %% start of most recently started note (not necessarily still playing)
 array[1..n] of var 0..max_end_time: recentStartTime_1; 
 array[1..n] of var 0..max_end_time: recentStartTime_2; 
@@ -180,8 +226,11 @@ array[1..n] of var 1..max_end_time: event_duration_accum_2;
 array[1..n] of var 1..max_end_time: event_duration_1; 
 array[1..n] of var 1..max_end_time: event_duration_2; 
 %% MIDI note numbers
-array[1..n] of var 48..72: event_pitch_1; 
-array[1..n] of var 48..72: event_pitch_2; 
+%% Hack: restrict pitch domain directly to diatonic scale
+array[1..n] of var {48, 50, 52, 53, 55, 57, 59, 60, 62, 64, 65, 67, 69, 71, 72}: event_pitch_1; 
+array[1..n] of var {48, 50, 52, 53, 55, 57, 59, 60, 62, 64, 65, 67, 69, 71, 72}: event_pitch_2; 
+% array[1..n] of var 48..72: event_pitch_1; 
+% array[1..n] of var 48..72: event_pitch_2; 
 
 % %% TMP comments
 % array[1..n] of var 0..n: current_start_index; % index of current new_event 
@@ -207,8 +256,8 @@ constraint event_duration_constraints(new_event_2, slice_duration, event_duratio
 
 constraint link_set_to_booleans(event_indices_set_1, new_event_1);
 constraint link_set_to_booleans(event_indices_set_2, new_event_2);
-constraint set2array(event_indices_set_1, event_indices_seamless_1);
-constraint set2array(event_indices_set_2, event_indices_seamless_2);
+constraint set2array(event_indices_set_1, event_indices_1);
+constraint set2array(event_indices_set_2, event_indices_2);
 
 constraint event_pitch_constraints(new_event_1, event_pitch_1);
 constraint event_pitch_constraints(new_event_2, event_pitch_2);
@@ -239,6 +288,23 @@ constraint event_pitch_constraints(new_event_2, event_pitch_2);
 % constraint forall(i in 1..n-1)( 
 %  not new_event[i+1] -> ( successor_start_index[i] = successor_start_index[i+1] )
 % );
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% Example-specific (simple counterpoint) constraints
+%% 
+
+% constraint is_diatonic(event_pitch_1);
+% constraint is_diatonic(event_pitch_2);
+
+constraint is_consonance(event_pitch_1, event_pitch_2);
+
+constraint restrict_melodic_interval(event_indices_1, event_pitch_1);
+constraint restrict_melodic_interval(event_indices_2, event_pitch_2);
+
+% constraint no_voice_crossing(event_pitch_1, event_pitch_2);
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
@@ -349,8 +415,8 @@ output [
   ++ "event_duration_1: " ++ show(event_duration_1) ++ "\n"
   ++ "event_duration_2: " ++ show(event_duration_2) ++ "\n"
 %   ++ "event_indices_set_1: " ++ show(event_indices_set_1) ++ "\n"
-  ++ "event_indices_seamless_1: " ++ show(event_indices_seamless_1) ++ "\n"
-  ++ "event_indices_seamless_2: " ++ show(event_indices_seamless_2) ++ "\n"
+  ++ "event_indices_1: " ++ show(event_indices_1) ++ "\n"
+  ++ "event_indices_2: " ++ show(event_indices_2) ++ "\n"
   ++ "event_pitch_1: " ++ show(event_pitch_1) ++ "\n"
   ++ "event_pitch_2: " ++ show(event_pitch_2) ++ "\n"
 %   ++ "current_start_index: " ++ show(current_start_index) ++ "\n"
