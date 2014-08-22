@@ -63,9 +63,9 @@ predicate alldifferent_except_x(var int: x, array[int] of var int: y) =
 
 %% Convert a set S to an array x[1..n]. Set elements are in increasing order in the array, and set elements must be in 1..n.
 %% If the array is longer than there are set elements, then the end of the array is padded with n+1.
+%% !! uses global n
 predicate set2array(var set of int: S, array[int] of var int: x) =
-  let { int: n = length(x),
-        int: exceeding = n+1 }
+  let { int: exceeding = n+1 }
 in  
   %% main constraint
   forall(dom_val in lb_array(x)..ub_array(x)) (
@@ -85,12 +85,11 @@ predicate slice_constraints(array[int] of var int: slice_start, array[int] of va
 
 
 %% !! TODO: recentStartTime cannot express yet whether never any event started yet (i.e., whether score started with rest)
+%% !! uses global n
 predicate recentStartTime_constraints(
     array[int] of var bool: new_event,
     array[int] of var int: slice_start, 
     array[int] of var int: recentStartTime) = 
-  let { int: n = length(new_event) }
-in  
   forall(i in 1..n)( 
     (new_event[i] <-> (recentStartTime[i] = slice_start[i] )) /\
     %% redundant constraint for propagation 
@@ -102,13 +101,12 @@ in
     recentStartTime[i] >= recentStartTime[i-1]
   );
 
+%% !! uses global n
 predicate event_duration_constraints(
     array[int] of var bool: new_event,
     array[int] of var int: slice_duration, 
     array[int] of var int: event_duration_accum,
     array[int] of var int: event_duration) =
-  let { int: n = length(new_event) }
-in  
   %% event_duration_accum
   forall(i in 1..n)( 
     new_event[i] <-> ( event_duration_accum[i] = slice_duration[i] )
@@ -134,6 +132,13 @@ in
 %% constraint forall(i in 1..n)( % redundant constraint for propagation
 %%   event_duration[i] <= max(event_duration_accum)
 %% );
+
+predicate event_pitch_constraints(
+    array[int] of var bool: new_event,
+    array[int] of var int: event_pitch) =
+  forall(i in 2..n)( 
+    not new_event[i] -> ( event_pitch[i] = event_pitch[i-1] ) % ! no equivalence, only implication
+  );   
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -164,7 +169,7 @@ array[1..n] of var 0..max_end_time: recentStartTime_1;
 %% accumulator for duration: value before new_event=true correct event_duration
 array[1..n] of var 1..max_end_time: event_duration_accum_1; 
 array[1..n] of var 1..max_end_time: event_duration_1; 
-% array[1..n] of var 48..72: event_pitch; % MIDI note numbers
+array[1..n] of var 48..72: event_pitch_1; % MIDI note numbers
 
 % %% TMP comments
 % array[1..n] of var 0..n: current_start_index; % index of current new_event 
@@ -185,11 +190,10 @@ constraint recentStartTime_constraints(new_event_1, slice_start, recentStartTime
 
 constraint event_duration_constraints(new_event_1, slice_duration, event_duration_accum_1, event_duration_1);
 
-%% event_indices_set
-%% event_indices_seamless
 constraint link_set_to_booleans(event_indices_set_1, new_event_1);
 constraint set2array(event_indices_set_1, event_indices_seamless_1);
 
+constraint event_pitch_constraints(new_event_1, event_pitch_1);
 
 
 % %% TMP comments
@@ -225,6 +229,11 @@ constraint set2array(event_indices_set_1, event_indices_seamless_1);
 
 % !! TODO: TMP -- aux until I introduced rests
 constraint new_event_1[1] = true;
+
+%% consecutive events differ in pitch
+constraint forall(i in 1..n-1) (  
+  event_indices_seamless_1[i+1] <= n -> 
+    event_pitch_1[event_indices_seamless_1[i]] != event_pitch_1[event_indices_seamless_1[i+1]] ); 
 
 
 % %% consecutive events differ in duration
@@ -300,7 +309,7 @@ constraint new_event_1[1] = true;
 
 % solve :: int_search(slice_duration ++ new_event_fd, 
 %% TMP: search also for event_indices_seamless
-solve :: int_search(new_event_fd_1 ++ slice_duration, % ++ event_indices_seamless, 
+solve :: int_search(slice_duration ++ new_event_fd_1 ++ event_pitch_1, 
   first_fail, 
 %   most_constrained,
   indomain_random, complete)
@@ -321,6 +330,7 @@ output [
   ++ "event_duration_1: " ++ show(event_duration_1) ++ "\n"
   ++ "event_indices_set_1: " ++ show(event_indices_set_1) ++ "\n"
   ++ "event_indices_seamless_1: " ++ show(event_indices_seamless_1) ++ "\n"
+  ++ "event_pitch_1: " ++ show(event_pitch_1) ++ "\n"
 %   ++ "current_start_index: " ++ show(current_start_index) ++ "\n"
 %   ++ "predecessor_start_index: " ++ show(predecessor_start_index) ++ "\n"
 %   ++ "successor_start_index: " ++ show(successor_start_index) ++ "\n"
