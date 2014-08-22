@@ -3,6 +3,17 @@ include "globals.mzn";
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
+% NOTE
+%
+% Performance does currently not exceed Strasheela, however
+% - There is a performance overhead created by the MiniZinc -> FlatZinc translation etc
+%   For larger / more complex CSP this overhead is less relevant
+% - fzn-gecode supports very easy multi threading -- but in this example it does not help performance (and Oz/Strasheela also has multi threading support) 
+% 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
 % TODO
 %
 %
@@ -10,6 +21,16 @@ include "globals.mzn";
 %
 % - !! add support for rests
 % 
+
+%
+% This simple set of constraints is later revised into the constraints of 
+% ~/oz/music/Strasheela/strasheela/strasheela/examples/02-Fuxian-firstSpecies-Counterpoint.oz 
+%
+
+
+%%
+%% Done
+%%
 
 %
 % - OK Extend to simple counterpoint example
@@ -22,15 +43,6 @@ include "globals.mzn";
 % - Only the following melodic intervals: {1..5, 7, 12}
 %
 
-%
-% This simple set of constraints is later revised into the constraints of 
-% ~/oz/music/Strasheela/strasheela/strasheela/examples/02-Fuxian-firstSpecies-Counterpoint.oz 
-%
-
-
-%%
-%% Done
-%%
 %
 % - OK New array storing indices or new note start slices (dense representation)
 %   -> possibly this is not a good idea...
@@ -210,12 +222,12 @@ array[1..n] of var bool: new_event_2; % voice 2
 array[1..n] of var 0..1: new_event_fd_1; 
 array[1..n] of var 0..1: new_event_fd_2; 
 %% set of indices where events start
-var set of 1..n: event_indices_set_1; 
-var set of 1..n: event_indices_set_2; 
+var set of 1..n: event_index_set_1; 
+var set of 1..n: event_index_set_2; 
 %% event start indices without intermediate elements (e.g., consecutive indices are always pointing to different events)
 %% n+1 to mark indices beyond the range
-array[1..n] of var 1..n+1: event_indices_1; 
-array[1..n] of var 1..n+1: event_indices_2; 
+array[1..n] of var 1..n+1: event_index_1; 
+array[1..n] of var 1..n+1: event_index_2; 
 %% start of most recently started note (not necessarily still playing)
 array[1..n] of var 0..max_end_time: recentStartTime_1; 
 array[1..n] of var 0..max_end_time: recentStartTime_2; 
@@ -254,10 +266,10 @@ constraint recentStartTime_constraints(new_event_2, slice_start, recentStartTime
 constraint event_duration_constraints(new_event_1, slice_duration, event_duration_accum_1, event_duration_1);
 constraint event_duration_constraints(new_event_2, slice_duration, event_duration_accum_2, event_duration_2);
 
-constraint link_set_to_booleans(event_indices_set_1, new_event_1);
-constraint link_set_to_booleans(event_indices_set_2, new_event_2);
-constraint set2array(event_indices_set_1, event_indices_1);
-constraint set2array(event_indices_set_2, event_indices_2);
+constraint link_set_to_booleans(event_index_set_1, new_event_1);
+constraint link_set_to_booleans(event_index_set_2, new_event_2);
+constraint set2array(event_index_set_1, event_index_1);
+constraint set2array(event_index_set_2, event_index_2);
 
 constraint event_pitch_constraints(new_event_1, event_pitch_1);
 constraint event_pitch_constraints(new_event_2, event_pitch_2);
@@ -300,8 +312,8 @@ constraint event_pitch_constraints(new_event_2, event_pitch_2);
 
 constraint is_consonance(event_pitch_1, event_pitch_2);
 
-constraint restrict_melodic_interval(event_indices_1, event_pitch_1);
-constraint restrict_melodic_interval(event_indices_2, event_pitch_2);
+constraint restrict_melodic_interval(event_index_1, event_pitch_1);
+constraint restrict_melodic_interval(event_index_2, event_pitch_2);
 
 % constraint no_voice_crossing(event_pitch_1, event_pitch_2);
 
@@ -414,9 +426,9 @@ output [
 %   ++ "event_duration_accum_1: " ++ show(event_duration_accum_1) ++ "\n"
   ++ "event_duration_1: " ++ show(event_duration_1) ++ "\n"
   ++ "event_duration_2: " ++ show(event_duration_2) ++ "\n"
-%   ++ "event_indices_set_1: " ++ show(event_indices_set_1) ++ "\n"
-  ++ "event_indices_1: " ++ show(event_indices_1) ++ "\n"
-  ++ "event_indices_2: " ++ show(event_indices_2) ++ "\n"
+%   ++ "event_index_set_1: " ++ show(event_index_set_1) ++ "\n"
+  ++ "event_index_1: " ++ show(event_index_1) ++ "\n"
+  ++ "event_index_2: " ++ show(event_index_2) ++ "\n"
   ++ "event_pitch_1: " ++ show(event_pitch_1) ++ "\n"
   ++ "event_pitch_2: " ++ show(event_pitch_2) ++ "\n"
 %   ++ "current_start_index: " ++ show(current_start_index) ++ "\n"
