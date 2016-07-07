@@ -3,12 +3,14 @@
   ;; :url "http://example.com/FIXME"
   :license {:name "GNU General Public License"
             :url "https://gnu.org/licenses/gpl.html"}
-  :dependencies [[org.clojure/clojure "1.6.0"]
+  :dependencies [[org.clojure/clojure "1.8.0"]
                  [minizinc/clojure2minizinc "0.1.0-SNAPSHOT"]
                  ;; an alternative class-based object-system for Clojure based on hash-maps and multimethods
                  ;; Doc: https://github.com/eduardoejp/fenrir, http://eduardoejp.github.io/fenrir/fenrir-api.html
                  ;; [fenrir "0.1.0"]
                  [org.clojure/math.numeric-tower "0.0.4"]
+                 ;; OSC library, https://github.com/overtone/osc-clj                 
+                 [overtone/osc-clj "0.9.0"]
                  ]
   :codox {:defaults {:doc "TODO: write docs"
                      :doc/format :markdown}
@@ -19,3 +21,4 @@
   ;; :target-path "target/%s"
   ;; :profiles {:uberjar {:aot :all}}
   )
+
