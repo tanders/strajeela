@@ -1,0 +1,2 @@
+Tests for setting up an OSC interface for Strajeela with other computer music environments
+
