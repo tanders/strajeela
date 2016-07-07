@@ -188,11 +188,11 @@ predicate is_consonance(array[int] of var int: pitch_1, array[int] of var int: p
     forall(i in 1..n)(abs(pitch_1[i] - pitch_2[i]) in ConsIntervals);
 
 %% TODO: use Gecode's `distance` constraint (which is likely there) instead of abs(x-y) 
-predicate restrict_melodic_interval(array[int] of var int: event_indices, array[int] of var int: pitch) =
+predicate restrict_melodic_interval(array[int] of var int: event_index, array[int] of var int: pitch) =
   let { set of int: MelIntervals = {1, 2, 3, 4, 5, 7, 12} } in 
     forall(i in 1..n-1)(
-      event_indices[i+1] <= n -> 
-        abs(pitch[event_indices[i]] - pitch[event_indices[i+1]]) in MelIntervals); 
+      event_index[i+1] <= n -> 
+        abs(pitch[event_index[i]] - pitch[event_index[i+1]]) in MelIntervals); 
 
 %% ? TODO: all time slices constrained -- see comment at is_consonance for same TODO
 predicate no_voice_crossing(array[int] of var int: pitch_1, array[int] of var int: pitch_2) =
