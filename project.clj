@@ -4,7 +4,7 @@
   :license {:name "GNU General Public License"
             :url "https://gnu.org/licenses/gpl.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [minizinc/clojure2minizinc "0.1.0-SNAPSHOT"]
+                 [minizinc/clojure2minizinc "0.2.1-SNAPSHOT"]
                  ;; an alternative class-based object-system for Clojure based on hash-maps and multimethods
                  ;; Doc: https://github.com/eduardoejp/fenrir, http://eduardoejp.github.io/fenrir/fenrir-api.html
                  ;; [fenrir "0.1.0"]
@@ -12,10 +12,11 @@
                  ;; OSC library, https://github.com/overtone/osc-clj                 
                  [overtone/osc-clj "0.9.0"]
                  ]
-  :codox {:defaults {:doc "TODO: write docs"
+  :codox {:metadata {:doc "TODO: write docs"
                      :doc/format :markdown}
-          :output-dir "doc/reference"
-          :src-dir-uri "https://github.com/tanders/strajeela/blob/master/"
+          :output-path "doc/reference"
+          ;; TODO: update URI for soures 
+          :source-uri "https://github.com/tanders/strajeela/tree/master"
           :src-linenum-anchor-prefix "L"}
   ;; :main ^:skip-aot strajeela.core
   ;; :target-path "target/%s"
