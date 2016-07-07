@@ -11,6 +11,20 @@ include "globals.mzn";
 % - fzn-gecode supports very easy multi threading -- but in this example it does not help performance (and Oz/Strasheela also has multi threading support) 
 % 
 
+%% Translation mzn2fzn takes longer than search with fzn-gecode
+% $ time mzn2fzn SimpleCounterpoint-twoVoices.mzn 
+% real	0m0.160s
+% user	0m0.090s
+% sys	0m0.026s
+
+% $ time fzn-gecode SimpleCounterpoint-twoVoices.fzn 
+% real	0m0.045s
+% user	0m0.033s
+% sys	0m0.009s
+
+%% Much mzn2fzn time is taken by parsing library (almost 1/3 of time in test run). I could reduce that time by reducing library to only defs I used
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -19,6 +33,7 @@ include "globals.mzn";
 %
 
 %
+% - Test performance of resulting FlatZinc model and compare that with MiniZinc -> FlatZinc translation and performance of Strasheela model
 % - !! add support for rests
 % 
 
@@ -94,6 +109,7 @@ predicate alldifferent_except_x(var int: x, array[int] of var int: y) =
 %% Convert a set S to an array x[1..n]. Set elements are in increasing order in the array, and set elements must be in 1..n.
 %% If the array is longer than there are set elements, then the end of the array is padded with n+1.
 %% !! uses global n
+%% !! predefined function set2array already exists in MiniZinc -- but does that work for variables as well?
 predicate set2array(var set of int: S, array[int] of var int: x) =
   let { int: exceeding = n+1 }
 in  
@@ -107,6 +123,7 @@ in
 
 
 %% Constraints for time slice arrays shared by all voices
+%% !! uses global n
 predicate slice_constraints(array[int] of var int: slice_start, array[int] of var int: slice_duration) =
   slice_start[1] = 0 /\
   forall(i in 1..n-1)( 
@@ -177,6 +194,7 @@ predicate event_pitch_constraints(
 %% 
 
 %% !! BUG: no propagation -- gecode solver attempts non-diatonic pitches and fails 
+%% Likely no domain propagation, only boundaries
 predicate is_diatonic(array[int] of var int: pitch) =
   let { set of int: ScalePCs = {0, 2, 4, 5, 7, 9, 11} } in 
     forall(i in 1..n)((pitch[i] mod 12) in ScalePCs );
