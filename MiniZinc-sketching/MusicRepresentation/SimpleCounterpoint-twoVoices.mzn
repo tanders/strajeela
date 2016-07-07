@@ -99,7 +99,7 @@ int: n = 20;
 
 %% Constrains the elements of array 'y' to be all different except those
 %% elements that are assigned to 'x'.
-%% source: modification of MiniZInc's alldifferent_except_0.mzn
+%% source: modification of MiniZinc's alldifferent_except_0.mzn
 %% unused after all
 predicate alldifferent_except_x(var int: x, array[int] of var int: y) = 
     forall(i, j in index_set(y) where i != j) (
