@@ -5,6 +5,7 @@ This software is intended to be a better version of Strasheela at some stage. An
 Once you downloaded the source, you could check out at the [[./doc/reference/index.html][reference documentation]] what is there so far (not much yet). 
 (Unfortunately, Github makes it rather challenging to show automatically generated HTML files.)
 
+
 ** COMMENT Installation
 
 Download from http://example.com/FIXME.
@@ -33,7 +34,7 @@ FIXME: listing of options this app accepts.
 
 ** License
 
-Copyright © 2014 Torsten Anders
+Copyright © 2016 Torsten Anders
 
 Distributed under the GNU General Public License.
 
