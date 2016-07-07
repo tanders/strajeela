@@ -1,0 +1,145 @@
+
+Very simple TODO for now, this gets more detailed over time 
+
+* COMMENT Further Material/Ideas
+
+  There are already some concrete ideas elsewhere, e.g., at 
+  [[file:~/Clojure/Strajeela/Strajeela.org]]
+
+
+* OSC Interface
+  :LOGBOOK:
+  CLOCK: [2016-07-04 Mon 10:08]--[2016-07-04 Mon 10:19] =>  0:11
+  # Fixing cider-nrepl problem (with receiving OSC) -- problem solved by updating Java to version 8
+  CLOCK: [2016-07-02 Sat 22:25]--[2016-07-02 Sat 23:35] =>  1:10
+  CLOCK: [2016-07-02 Sat 21:00]--[2016-07-02 Sat 22:20] =>  1:20
+  CLOCK: [2016-07-02 Sat 15:13]--[2016-07-02 Sat 16:00] =>  0:47
+  CLOCK: [2016-06-30 Thu 23:45]--[2016-06-30 Thu 23:58] =>  0:13
+  CLOCK: [2016-06-30 Thu 16:15]--[2016-06-30 Thu 16:34] =>  0:19
+  CLOCK: [2016-06-30 Thu 14:04]--[2016-06-30 Thu 15:10] =>  1:06
+  CLOCK: [2016-06-30 Thu 12:34]--[2016-06-30 Thu 13:30] =>  0:56
+  CLOCK: [2016-06-27 Mon 17:00]--[2016-06-27 Mon 17:30] =>  0:30
+  :END:
+
+  From early on get an OSC interface to Max and/or SuperCollider for testing from within those environments (e.g., for score outputs with Max library Bach)
+
+  An Open Sound Control library for Clojure.
+  https://github.com/overtone/osc-clj
+
+  OSC spec
+  http://opensoundcontrol.org/spec-1_0
+
+
+** Format sketch
+
+Only a single solver at any time at a single OSC address + port
+
+Realtime use assumed, where a CSP is solved split in more or less short time window. 
+
+
+*** OSC messages
+
+**** /constraint/next_applicator <name string> <arbitrary arguments>
+
+     Sets the constraint applicator for /constraint/apply calls. This applicator is used for the next for the next and all future time windows until overwritten by another /constraint/next_applicator call.
+
+
+**** /constraint/apply <name string> <arbitrary arguments>
+
+     Applies a specified and already defined constraint with its arguments to the solver using the last /constraint/next_applicator set. The constraint is applied for the next and all future time windows until overwritten by another /constraint/apply or /constraint/remove with the same constraint name.
+
+     This message is conveniently created in Max.
+
+
+**** /constraint/add <name string> <arbitrary arguments>
+
+     Variant of /constraint/apply for self-contained constraints, i.e., constraints that include their constraint applicator.
+
+
+**** /constraint/remove <name string>
+  Removes the named constraint for the next and all future time windows.
+
+
+**** /constraint/define <name string> <clojure code definition string>
+  Defines the named constraint. Many constraints are likely predefined in the end directly in Clojure, as creating Clojure strings within Max or SuperCollider is cumbersome.
+
+
+**** /solver/call <arbitrary arguments>
+  Calls the solver for the next time window with all the current constraints and solver arguments. So, for a continued performance this message will be sent repeatedly (regularly?) 
+  The solver solves either a plain CSP for a short time frame that can be solved quickly enough, or is an optimisation that by and by improves a solution and the best solution so far is taken when the time is up. Question: can the latter be efficient? Probably depends on the solvers. 
+  -> This will send back solution of solver for current time window 
+
+
+**** /solver/kill
+  Kills the current solver call, in case system hands. Should not be necessary, actually, as solver should kill itself after a specified time period, but in case that is wrongly set by accident...
+
+
+
+* Interface to clojure2minizinc 
+
+  Allow plain clojure2minizinc CSPs be solved from within Max and/or SuperCollider 
+  
+  Develop a suitable language of OSC and perhaps some kind of simplifying interface to allow for that
+
+  To consider: can full CSPs actually be defined via OSC, or only existing parts of CSPs be combined, like the high-level interface of Cluster Engine. OSC likely allows for both options in principle... (in SuperCollider, are full Synth etc. definitions expressed in OSC sent to the server?)
+
+
+
+* Provide realtime support for clojure2minizinc
+
+  Some special "solver" that calls same subproblem with a stream of arguments  
+
+  See my paper 
+  Anders, T. & Miranda, E. R. (2008) ‘Constraint-Based Composition in Realtime’, in Proceedings of the 2008 International Computer Music Conference. 24 August 2008 Belfast, UK.
+
+  Make sure that I render minizinc only once at a "compilation" stage and then use resulting flatzinc with someone embedded arguments for calling solver(s) in "loop" with stream of arguments
+
+
+* Add polyphonic music representation
+
+  Use a variant of Strasheela design that is simpler to use
+  - Default rich (fully extended) score data structure created very easily with only a few standard arguments (e.g., number of parts, ... -- see solver interface of Cluster Engine)
+    - Later, variables of the music representation that are not constrained by user are automatically excluded somehow from resulting CSP
+    - For power users allow definition of music representation extended or to be overwritten in some way
+  - Constraint applicators externally -- constraints applied with higher-order programming
+    - Define standard applicators similar to Cluster Engine
+    - Have an interface for user-defined constraint applicators 
+
+
+** Simple polyphonic CSP in MiniZinc
+   :LOGBOOK:
+   CLOCK: [2016-07-04 Mon 15:36]--[2016-07-04 Mon 16:18] =>  0:42
+   CLOCK: [2016-07-04 Mon 13:18]--[2016-07-04 Mon 14:20] =>  1:02
+   CLOCK: [2016-07-04 Mon 11:43]--[2016-07-04 Mon 12:08] =>  0:25
+   CLOCK: [2016-07-04 Mon 10:45]--[2016-07-04 Mon 11:08] =>  0:23
+   # Update MiniZinc
+   CLOCK: [2016-07-04 Mon 10:34]--[2016-07-04 Mon 10:44] =>  0:10
+   :END:
+
+
+** Port polyphonic CSP to Clojure2MiniZinc
+   :LOGBOOK:
+   CLOCK: [2016-07-07 Thu 19:13]
+   CLOCK: [2016-07-07 Thu 17:40]--[2016-07-07 Thu 18:15] =>  0:35
+   CLOCK: [2016-07-07 Thu 15:18]--[2016-07-07 Thu 16:30] =>  1:12
+   CLOCK: [2016-07-07 Thu 14:10]--[2016-07-07 Thu 14:59] =>  0:49
+   CLOCK: [2016-07-07 Thu 12:41]--[2016-07-07 Thu 13:15] =>  0:34
+   CLOCK: [2016-07-07 Thu 12:17]--[2016-07-07 Thu 12:38] =>  0:21
+   :END:
+
+
+** Generalise...
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
