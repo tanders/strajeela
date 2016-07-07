@@ -13,3 +13,6 @@ target
 # System files
 .DS_Store
 
+# Symbolic links
+checkouts/
+
