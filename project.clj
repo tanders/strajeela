@@ -3,7 +3,8 @@
   ;; :url "http://example.com/FIXME"
   :license {:name "GNU General Public License"
             :url "https://gnu.org/licenses/gpl.html"}
-  :dependencies [[org.clojure/clojure "1.8.0"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha10"]
+                 ;; [org.clojure/clojure "1.8.0"]
                  [minizinc/clojure2minizinc "0.2.1-SNAPSHOT"]
                  ;; an alternative class-based object-system for Clojure based on hash-maps and multimethods
                  ;; Doc: https://github.com/eduardoejp/fenrir, http://eduardoejp.github.io/fenrir/fenrir-api.html
@@ -22,4 +23,5 @@
   ;; :target-path "target/%s"
   ;; :profiles {:uberjar {:aot :all}}
   )
+
 
